@@ -1,7 +1,7 @@
 module PostgRest
     exposing
         ( Field
-        , Resource
+        , Schema
         , Query
         , OrderBy
         , Filter
@@ -18,7 +18,7 @@ module PostgRest
         , float
         , bool
         , nullable
-        , resource
+        , schema
         , query
         , embed
         , embedMany
@@ -49,8 +49,8 @@ module PostgRest
 
 I recommend looking at the [examples](https://github.com/john-kelly/elm-postgrest/blob/master/examples/Main.elm) before diving into the API or source code.
 
-# Define a Resource
-@docs Resource, resource
+# Define a Schema
+@docs Schema, schema
 
 ### Fields
 @docs Field, string, int, float, bool, field, nullable
@@ -89,8 +89,8 @@ import String
 
 
 {-| -}
-type Resource uniq schema
-    = Resource String schema
+type Schema uniq schema
+    = Schema String schema
 
 
 {-| -}
@@ -185,9 +185,9 @@ hasMany uniq =
 
 
 {-| -}
-resource : uniq -> String -> schema -> Resource uniq schema
-resource uniq name schema =
-    Resource name schema
+schema : uniq -> String -> schema -> Schema uniq schema
+schema uniq name s =
+    Schema name s
 
 
 {-| -}
@@ -236,8 +236,8 @@ nullable (Field decoder urlEncoder name) =
 
 
 {-| -}
-query : Resource uniq schema -> (a -> b) -> Query uniq schema (a -> b)
-query (Resource name schema) ctor =
+query : Schema uniq schema -> (a -> b) -> Query uniq schema (a -> b)
+query (Schema name schema) ctor =
     Query schema
         (Parameters { name = name, select = [], filter = [], order = [], limit = NoLimit, embedded = [] })
         (Decode.succeed ctor)
