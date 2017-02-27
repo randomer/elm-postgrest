@@ -8,7 +8,7 @@ type Session
 
 
 session =
-    PG.resource Session
+    PG.schema Session
         "sessions"
         { id = PG.int "id"
         , speaker_id = PG.int "speaker_id"
@@ -25,7 +25,7 @@ type Speaker
 
 
 speaker =
-    PG.resource Speaker
+    PG.schema Speaker
         "speakers"
         { id = PG.int "id"
         , name = PG.string "name"

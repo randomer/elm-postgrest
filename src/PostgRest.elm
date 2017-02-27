@@ -9,8 +9,10 @@ module PostgRest
         , Page
         , Relation
         , HasOne
+        , HasOneNullable
         , HasMany
         , hasOne
+        , hasOneNullable
         , hasMany
         , field
         , string
@@ -21,11 +23,10 @@ module PostgRest
         , schema
         , query
         , embed
+        , embedNullable
         , embedMany
         , select
         , hardcoded
-        , order
-        , filter
         , like
         , eq
         , gte
@@ -65,10 +66,10 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 @docs select, hardcoded, embed, embedMany
 
 ### Filtering
-@docs Filter, filter, like, ilike, eq, gte, gt, lte, lt, inList, is, not
+@docs Filter, like, ilike, eq, gte, gt, lte, lt, inList, is, not
 
 ### Ordering
-@docs OrderBy, order, asc, desc
+@docs OrderBy, asc, desc
 
 ### Limiting
 @docs Limit, limitTo, noLimit
@@ -168,6 +169,11 @@ type HasOne
 
 
 {-| -}
+type HasOneNullable
+    = HasOneNullable HasOneNullable
+
+
+{-| -}
 type Relation a uniq
     = Relation
 
@@ -181,6 +187,12 @@ hasOne uniq =
 {-| -}
 hasMany : uniq -> Relation HasMany uniq
 hasMany uniq =
+    Relation
+
+
+{-| -}
+hasOneNullable : uniq -> Relation HasOneNullable uniq
+hasOneNullable uniq =
     Relation
 
 
@@ -244,19 +256,48 @@ query (Schema name schema) ctor =
 
 
 {-| -}
-embed : (schema1 -> Relation HasOne uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (Maybe a -> b) -> Query uniq1 schema1 b
+embed : (schema1 -> Relation HasOne uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (a -> b) -> Query uniq1 schema1 b
 embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
-        (apply decoder (Decode.nullable (Decode.field subParams.name subDecoder)))
+        (apply decoder (Decode.field subParams.name subDecoder))
 
 
 {-| -}
-embedMany : (schema1 -> Relation HasMany uniq2) -> Limit -> Query uniq2 schema2 a -> Query uniq1 schema1 (List a -> b) -> Query uniq1 schema1 b
-embedMany _ limit (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
+embedNullable : (schema1 -> Relation HasOneNullable uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (Maybe a -> b) -> Query uniq1 schema1 b
+embedNullable _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
-        (Parameters { params | embedded = (Parameters { subParams | limit = limit }) :: params.embedded })
-        (apply decoder (Decode.field subParams.name (Decode.list subDecoder)))
+        (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
+        (apply decoder (Decode.field subParams.name (Decode.nullable subDecoder)))
+
+
+type alias OptionsWithLimit schema =
+    { limit : Limit
+    , filters : List (schema -> Filter)
+    , orders : List (schema -> OrderBy)
+    }
+
+
+type alias Options schema =
+    { filters : List (schema -> Filter)
+    , orders : List (schema -> OrderBy)
+    }
+
+
+{-| -}
+embedMany : (schema1 -> Relation HasMany uniq2) -> OptionsWithLimit schema2 -> Query uniq2 schema2 a -> Query uniq1 schema1 (List a -> b) -> Query uniq1 schema1 b
+embedMany _ options (Query subSchema (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
+    let
+        newSubParams =
+            { subParams
+                | limit = options.limit
+                , filter = List.map (\getFilter -> getFilter subSchema) options.filters
+                , order = List.map (\getOrder -> getOrder subSchema) options.orders
+            }
+    in
+        Query schema
+            (Parameters { params | embedded = Parameters newSubParams :: params.embedded })
+            (apply decoder (Decode.field newSubParams.name (Decode.list subDecoder)))
 
 
 {-| -}
@@ -287,23 +328,6 @@ limitTo limit =
 noLimit : Limit
 noLimit =
     NoLimit
-
-
-{-| -}
-order : List (schema -> OrderBy) -> Query uniq schema a -> Query uniq schema a
-order orders (Query schema (Parameters params) decoder) =
-    Query schema
-        (Parameters { params | order = params.order ++ List.map (\getOrder -> getOrder schema) orders })
-        decoder
-
-
-{-| Apply filters to a query
--}
-filter : List (schema -> Filter) -> Query uniq schema a -> Query uniq schema a
-filter filters (Query schema (Parameters params) decoder) =
-    Query schema
-        (Parameters { params | filter = params.filter ++ List.map (\getFilter -> getFilter schema) filters })
-        decoder
 
 
 {-| -}
@@ -414,9 +438,16 @@ desc getField schema =
 
 {-| Takes `limit`, `url` and a `query`, returns an Http.Request
 -}
-many : Limit -> String -> Query uniq schema a -> Http.Request (List a)
-many limit url (Query _ (Parameters params) decoder) =
+many : String -> OptionsWithLimit schema -> Query uniq schema a -> Http.Request (List a)
+many url options (Query schema (Parameters params) decoder) =
     let
+        newParams =
+            { params
+                | limit = options.limit
+                , filter = List.map (\getFilter -> getFilter schema) options.filters
+                , order = List.map (\getOrder -> getOrder schema) options.orders
+            }
+
         settings =
             { count = False
             , singular = False
@@ -424,7 +455,7 @@ many limit url (Query _ (Parameters params) decoder) =
             }
 
         ( headers, queryUrl ) =
-            getHeadersAndQueryUrl settings url params.name (Parameters { params | limit = limit })
+            getHeadersAndQueryUrl settings url newParams.name (Parameters newParams)
     in
         Http.request
             { method = "GET"
@@ -439,9 +470,15 @@ many limit url (Query _ (Parameters params) decoder) =
 
 {-| Takes `url` and a `query`, returns an Http.Request
 -}
-first : String -> Query uniq schema a -> Http.Request (Maybe a)
-first url (Query _ (Parameters params) decoder) =
+first : String -> Options schema -> Query uniq schema a -> Http.Request (Maybe a)
+first url options (Query schema (Parameters params) decoder) =
     let
+        newParams =
+            { params
+                | filter = List.map (\getFilter -> getFilter schema) options.filters
+                , order = List.map (\getOrder -> getOrder schema) options.orders
+            }
+
         settings =
             { count = False
             , singular = True
@@ -449,7 +486,7 @@ first url (Query _ (Parameters params) decoder) =
             }
 
         ( headers, queryUrl ) =
-            getHeadersAndQueryUrl settings url params.name (Parameters params)
+            getHeadersAndQueryUrl settings url newParams.name (Parameters newParams)
     in
         Http.request
             { method = "GET"
