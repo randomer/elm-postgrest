@@ -40,7 +40,7 @@ module PostgRest
         , desc
         , limitTo
         , noLimit
-        , list
+        , many
         , first
         , paginate
         )
@@ -74,7 +74,7 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 @docs Limit, limitTo, noLimit
 
 # Send a Query
-@docs list, first
+@docs many, first
 
 ### Pagination
 @docs Page, paginate
@@ -414,8 +414,8 @@ desc getField schema =
 
 {-| Takes `limit`, `url` and a `query`, returns an Http.Request
 -}
-list : Limit -> String -> Query uniq schema a -> Http.Request (List a)
-list limit url (Query _ (Parameters params) decoder) =
+many : Limit -> String -> Query uniq schema a -> Http.Request (List a)
+many limit url (Query _ (Parameters params) decoder) =
     let
         settings =
             { count = False
