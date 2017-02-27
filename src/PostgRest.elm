@@ -20,8 +20,8 @@ module PostgRest
         , nullable
         , resource
         , query
-        , include
-        , includeMany
+        , embed
+        , embedMany
         , select
         , hardcoded
         , order
@@ -62,7 +62,7 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 @docs Query, query
 
 ### Selecting and Nesting
-@docs select, hardcoded, include, includeMany
+@docs select, hardcoded, embed, embedMany
 
 ### Filtering
 @docs Filter, filter, like, ilike, eq, gte, gt, lte, lt, inList, is, not
@@ -244,16 +244,16 @@ query (Resource name schema) ctor =
 
 
 {-| -}
-include : (schema1 -> Relation HasOne uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (Maybe a -> b) -> Query uniq1 schema1 b
-include _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
+embed : (schema1 -> Relation HasOne uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (Maybe a -> b) -> Query uniq1 schema1 b
+embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
         (apply decoder (Decode.nullable (Decode.field subParams.name subDecoder)))
 
 
 {-| -}
-includeMany : (schema1 -> Relation HasMany uniq2) -> Limit -> Query uniq2 schema2 a -> Query uniq1 schema1 (List a -> b) -> Query uniq1 schema1 b
-includeMany _ limit (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
+embedMany : (schema1 -> Relation HasMany uniq2) -> Limit -> Query uniq2 schema2 a -> Query uniq1 schema1 (List a -> b) -> Query uniq1 schema1 b
+embedMany _ limit (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters { subParams | limit = limit }) :: params.embedded })
         (apply decoder (Decode.field subParams.name (Decode.list subDecoder)))
@@ -627,7 +627,7 @@ labelParamsHelper prefix (Parameters params) =
 
 {-| NOTE: What if we were to label when we add?
 OrderBy, Filter, and Limit could have a List String which is populated by prefix info whenever
-a query is included in another query. We would still need an operation to flatten
+a query is embedded in another query. We would still need an operation to flatten
 the QueryParams, but the logic would be much simpler (would no longer be a weird
 concatMap) This may be a good idea / improve performance a smudge (prematureoptimzation much?)
 -}
