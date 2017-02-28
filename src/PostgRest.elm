@@ -251,12 +251,24 @@ nullable (Field decoder urlEncoder name) =
 query : Schema uniq schema -> (a -> b) -> Query uniq schema (a -> b)
 query (Schema name schema) ctor =
     Query schema
-        (Parameters { name = name, select = [], filter = [], order = [], limit = NoLimit, embedded = [] })
+        (Parameters
+            { name = name
+            , select = []
+            , filter = []
+            , order = []
+            , limit = NoLimit
+            , embedded = []
+            }
+        )
         (Decode.succeed ctor)
 
 
 {-| -}
-embed : (schema1 -> Relation HasOne uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (a -> b) -> Query uniq1 schema1 b
+embed :
+    (schema1 -> Relation HasOne uniq2)
+    -> Query uniq2 schema2 a
+    -> Query uniq1 schema1 (a -> b)
+    -> Query uniq1 schema1 b
 embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
@@ -264,28 +276,27 @@ embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters pa
 
 
 {-| -}
-embedNullable : (schema1 -> Relation HasOneNullable uniq2) -> Query uniq2 schema2 a -> Query uniq1 schema1 (Maybe a -> b) -> Query uniq1 schema1 b
+embedNullable :
+    (schema1 -> Relation HasOneNullable uniq2)
+    -> Query uniq2 schema2 a
+    -> Query uniq1 schema1 (Maybe a -> b)
+    -> Query uniq1 schema1 b
 embedNullable _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
         (apply decoder (Decode.field subParams.name (Decode.nullable subDecoder)))
 
 
-type alias OptionsWithLimit schema =
-    { limit : Limit
-    , filters : List (schema -> Filter)
-    , orders : List (schema -> OrderBy)
-    }
-
-
-type alias Options schema =
-    { filters : List (schema -> Filter)
-    , orders : List (schema -> OrderBy)
-    }
-
-
 {-| -}
-embedMany : (schema1 -> Relation HasMany uniq2) -> OptionsWithLimit schema2 -> Query uniq2 schema2 a -> Query uniq1 schema1 (List a -> b) -> Query uniq1 schema1 b
+embedMany :
+    (schema1 -> Relation HasMany uniq2)
+    -> { limit : Limit
+       , filters : List (schema2 -> Filter)
+       , orders : List (schema2 -> OrderBy)
+       }
+    -> Query uniq2 schema2 a
+    -> Query uniq1 schema1 (List a -> b)
+    -> Query uniq1 schema1 b
 embedMany _ options (Query subSchema (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     let
         newSubParams =
@@ -406,7 +417,12 @@ is =
 
 {-| Negate a Filter
 -}
-not : (a -> (schema -> Field a) -> schema -> Filter) -> a -> (schema -> Field a) -> schema -> Filter
+not :
+    (a -> (schema -> Field a) -> schema -> Filter)
+    -> a
+    -> (schema -> Field a)
+    -> schema
+    -> Filter
 not filterCtor val getField schema =
     case filterCtor val getField schema of
         Filter negated cond fieldName ->
@@ -431,14 +447,15 @@ desc getField schema =
             Desc name
 
 
-
--- naming for these functions is based off of:
--- http://www.django-rest-framework.org/api-guide/generic-views/#retrieveupdateapiview
-
-
-{-| Takes `limit`, `url` and a `query`, returns an Http.Request
--}
-many : String -> OptionsWithLimit schema -> Query uniq schema a -> Http.Request (List a)
+{-| -}
+many :
+    String
+    -> { limit : Limit
+       , filters : List (schema -> Filter)
+       , orders : List (schema -> OrderBy)
+       }
+    -> Query uniq schema a
+    -> Http.Request (List a)
 many url options (Query schema (Parameters params) decoder) =
     let
         newParams =
@@ -471,9 +488,14 @@ many url options (Query schema (Parameters params) decoder) =
             }
 
 
-{-| Takes `url` and a `query`, returns an Http.Request
--}
-first : String -> Options schema -> Query uniq schema a -> Http.Request (Maybe a)
+{-| -}
+first :
+    String
+    -> { filters : List (schema -> Filter)
+       , orders : List (schema -> OrderBy)
+       }
+    -> Query uniq schema a
+    -> Http.Request (Maybe a)
 first url options (Query schema (Parameters params) decoder) =
     let
         newParams =
@@ -506,7 +528,14 @@ first url options (Query schema (Parameters params) decoder) =
 
 
 {-| -}
-paginate : String -> { pageNumber : Int, pageSize : Int } -> Options schema -> Query uniq schema a -> Http.Request (Page a)
+paginate :
+    String
+    -> { pageNumber : Int, pageSize : Int }
+    -> { filters : List (schema -> Filter)
+       , orders : List (schema -> OrderBy)
+       }
+    -> Query uniq schema a
+    -> Http.Request (Page a)
 paginate url { pageNumber, pageSize } options (Query schema (Parameters params) decoder) =
     let
         newParams =
@@ -560,7 +589,6 @@ type alias Settings =
     }
 
 
-{-| -}
 getHeadersAndQueryUrl : Settings -> String -> String -> Parameters -> ( List Http.Header, String )
 getHeadersAndQueryUrl settings url name p =
     let
@@ -618,7 +646,6 @@ selectsToKeyValueHelper (Parameters params) =
         params.name ++ "{" ++ selection ++ "}"
 
 
-{-| -}
 selectsToKeyValue : Parameters -> List ( String, String )
 selectsToKeyValue (Parameters params) =
     let
@@ -631,7 +658,6 @@ selectsToKeyValue (Parameters params) =
         [ ( "select", selection ) ]
 
 
-{-| -}
 offsetToKeyValue : Maybe Int -> List ( String, String )
 offsetToKeyValue maybeOffset =
     case maybeOffset of
@@ -642,7 +668,6 @@ offsetToKeyValue maybeOffset =
             [ ( "offset", toString offset ) ]
 
 
-{-| -}
 labelParamsHelper : String -> Parameters -> ( List ( String, OrderBy ), List ( String, Filter ), List ( String, Limit ) )
 labelParamsHelper prefix (Parameters params) =
     let
@@ -689,7 +714,6 @@ labelParams =
     labelParamsHelper ""
 
 
-{-| -}
 labeledFiltersToKeyValues : List ( String, Filter ) -> List ( String, String )
 labeledFiltersToKeyValues filters =
     let
@@ -735,7 +759,6 @@ labeledFiltersToKeyValues filters =
         List.map filterToKeyValue filters
 
 
-{-| -}
 labeledOrdersToKeyValue : List ( String, OrderBy ) -> List ( String, String )
 labeledOrdersToKeyValue orders =
     let
@@ -781,7 +804,6 @@ labeledOrdersToKeyValue orders =
             |> List.filterMap labeledOrderToKeyValue
 
 
-{-| -}
 labeledLimitsToKeyValue : List ( String, Limit ) -> List ( String, String )
 labeledLimitsToKeyValue limits =
     let
