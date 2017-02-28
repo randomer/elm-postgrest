@@ -7,7 +7,7 @@ module PostgRest
         , Filter
         , Limit
         , Page
-        , Relation
+        , Relationship
         , HasOne
         , HasOneNullable
         , HasMany
@@ -56,14 +56,14 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 ### Fields
 @docs Field, string, int, float, bool, field, nullable
 
-### Relations
-@docs Relation, HasOne, hasOne, hasMany, HasMany
+### Relationships
+@docs Relationship, HasOne, hasOne, HasOneNullable, hasOneNullable, HasMany, hasMany
 
 # Build a Query
 @docs Query, query
 
 ### Selecting and Nesting
-@docs select, hardcoded, embed, embedMany
+@docs select, embed, embedNullable, embedMany, hardcoded
 
 ### Filtering
 @docs Filter, like, ilike, eq, gte, gt, lte, lt, inList, is, not
@@ -174,26 +174,26 @@ type HasOneNullable
 
 
 {-| -}
-type Relation a uniq
-    = Relation
+type Relationship a uniq
+    = Relationship
 
 
 {-| -}
-hasOne : uniq -> Relation HasOne uniq
+hasOne : uniq -> Relationship HasOne uniq
 hasOne uniq =
-    Relation
+    Relationship
 
 
 {-| -}
-hasMany : uniq -> Relation HasMany uniq
+hasMany : uniq -> Relationship HasMany uniq
 hasMany uniq =
-    Relation
+    Relationship
 
 
 {-| -}
-hasOneNullable : uniq -> Relation HasOneNullable uniq
+hasOneNullable : uniq -> Relationship HasOneNullable uniq
 hasOneNullable uniq =
-    Relation
+    Relationship
 
 
 {-| -}
@@ -265,7 +265,7 @@ query (Schema name schema) ctor =
 
 {-| -}
 embed :
-    (schema1 -> Relation HasOne uniq2)
+    (schema1 -> Relationship HasOne uniq2)
     -> Query uniq2 schema2 a
     -> Query uniq1 schema1 (a -> b)
     -> Query uniq1 schema1 b
@@ -277,7 +277,7 @@ embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters pa
 
 {-| -}
 embedNullable :
-    (schema1 -> Relation HasOneNullable uniq2)
+    (schema1 -> Relationship HasOneNullable uniq2)
     -> Query uniq2 schema2 a
     -> Query uniq1 schema1 (Maybe a -> b)
     -> Query uniq1 schema1 b
@@ -289,7 +289,7 @@ embedNullable _ (Query _ (Parameters subParams) subDecoder) (Query schema (Param
 
 {-| -}
 embedMany :
-    (schema1 -> Relation HasMany uniq2)
+    (schema1 -> Relationship HasMany uniq2)
     -> { limit : Limit
        , filters : List (schema2 -> Filter)
        , order : List (schema2 -> OrderBy)
