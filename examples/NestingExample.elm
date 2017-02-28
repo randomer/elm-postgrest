@@ -3,7 +3,7 @@ module Main exposing (..)
 import Html
 import Http
 import PostgRest as PG
-import Resources
+import Schema
 
 
 type alias Session =
@@ -24,12 +24,12 @@ type alias Speaker =
 sessionCmd =
     let
         speakerQuery =
-            PG.query Resources.speaker Speaker
+            PG.query Schema.speaker Speaker
                 |> PG.select .id
                 |> PG.select .name
                 |> PG.select .bio
     in
-        PG.query Resources.session Session
+        PG.query Schema.session Session
             |> PG.select .id
             |> PG.select .location
             |> PG.select .start_time

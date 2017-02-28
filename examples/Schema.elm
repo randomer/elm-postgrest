@@ -1,4 +1,4 @@
-module Resources exposing (Session, session, Speaker, speaker)
+module Schema exposing (Session, session, Speaker, speaker)
 
 import PostgRest as PG
 

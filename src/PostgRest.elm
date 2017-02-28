@@ -455,7 +455,10 @@ many url options (Query schema (Parameters params) decoder) =
             }
 
         ( headers, queryUrl ) =
-            getHeadersAndQueryUrl settings url newParams.name (Parameters newParams)
+            getHeadersAndQueryUrl settings
+                url
+                newParams.name
+                (Parameters newParams)
     in
         Http.request
             { method = "GET"
@@ -486,7 +489,10 @@ first url options (Query schema (Parameters params) decoder) =
             }
 
         ( headers, queryUrl ) =
-            getHeadersAndQueryUrl settings url newParams.name (Parameters newParams)
+            getHeadersAndQueryUrl settings
+                url
+                newParams.name
+                (Parameters newParams)
     in
         Http.request
             { method = "GET"
@@ -500,9 +506,16 @@ first url options (Query schema (Parameters params) decoder) =
 
 
 {-| -}
-paginate : { pageNumber : Int, pageSize : Int } -> String -> Query uniq schema a -> Http.Request (Page a)
-paginate { pageNumber, pageSize } url (Query _ (Parameters params) decoder) =
+paginate : String -> { pageNumber : Int, pageSize : Int } -> Options schema -> Query uniq schema a -> Http.Request (Page a)
+paginate url { pageNumber, pageSize } options (Query schema (Parameters params) decoder) =
     let
+        newParams =
+            { params
+                | filter = List.map (\getFilter -> getFilter schema) options.filters
+                , order = List.map (\getOrder -> getOrder schema) options.orders
+                , limit = (LimitTo pageSize)
+            }
+
         settings =
             -- NOTE: pageNumber is NOT 0 indexed. the first page is 1.
             { count = True
@@ -511,7 +524,10 @@ paginate { pageNumber, pageSize } url (Query _ (Parameters params) decoder) =
             }
 
         ( headers, queryUrl ) =
-            getHeadersAndQueryUrl settings url params.name (Parameters { params | limit = (LimitTo pageSize) })
+            getHeadersAndQueryUrl settings
+                url
+                newParams.name
+                (Parameters newParams)
 
         handleResponse response =
             let

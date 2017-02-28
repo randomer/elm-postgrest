@@ -3,7 +3,7 @@ module Main exposing (..)
 import Html
 import Http
 import PostgRest as PG
-import Resources
+import Schema
 
 
 type alias Session =
@@ -14,13 +14,15 @@ type alias Session =
 
 
 sessionCmd =
-    PG.query Resources.session Session
+    PG.query Schema.session Session
         |> PG.select .id
         |> PG.select .location
         |> PG.select .start_time
-        |> PG.filter [ .location |> PG.not PG.ilike "%russia%" ]
-        |> PG.order [ PG.asc .start_time ]
-        |> PG.list PG.noLimit "http://postgrest.herokuapp.com/"
+        |> PG.many "http://postgrest.herokuapp.com/"
+            { filters = [ .location |> PG.not PG.ilike "%russia%" ]
+            , orders = [ PG.asc .start_time ]
+            , limit = PG.noLimit
+            }
         |> Http.send Fetch
 
 

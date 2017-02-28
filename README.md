@@ -9,11 +9,11 @@ A query builder library for PostgREST.
 ```elm
 import PostgRest as PG
 
-type PokemonResource
-    = PokemonResource
+type PokemonSchema
+    = PokemonSchema
 
-pokemonResource =
-    PG.resource PokemonResource
+pokemonSchema =
+    PG.schema PokemonSchema
         "pokemon"
         { id = PG.int "id"
         , name = PG.string "name"
@@ -28,10 +28,12 @@ type alias Pokemon =
     }
 
 pokemonRequest =
-    PG.query pokemonResource Pokemon
+    PG.query pokemonSchema Pokemon
         |> PG.select .id
         |> PG.select .name
-        |> PG.filter [ .id |> PG.lte 151 ]
-        |> PG.order [ PG.asc .id ]
-        |> PG.list PG.noLimit "http://localhost:8000/"
+        |> PG.many "http://localhost:8000/"
+            { filters = [ .id |> PG.lte 151 ]
+            , orders = [ PG.asc .id ]
+            , limit = PG.noLimit
+            }
 ```
