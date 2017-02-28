@@ -616,7 +616,8 @@ getHeadersAndQueryUrl settings url name p =
 
         pluralityHeader =
             if singular then
-                [ ( "Prefer", "plurality=singular" ) ]
+                -- https://postgrest.com/en/v0.4/api.html#singular-or-plural
+                [ ( "Accept", "application/vnd.pgrst.object+json" ) ]
             else
                 []
 
