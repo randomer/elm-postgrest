@@ -90,12 +90,12 @@ import String
 
 
 {-| -}
-type Schema uniq schema
+type Schema id schema
     = Schema String schema
 
 
 {-| -}
-type Query uniq schema a
+type Query id schema a
     = Query schema Parameters (Decode.Decoder a)
 
 
@@ -174,31 +174,31 @@ type HasOneNullable
 
 
 {-| -}
-type Relationship a uniq
+type Relationship a id
     = Relationship
 
 
 {-| -}
-hasOne : uniq -> Relationship HasOne uniq
-hasOne uniq =
+hasOne : id -> Relationship HasOne id
+hasOne id =
     Relationship
 
 
 {-| -}
-hasMany : uniq -> Relationship HasMany uniq
-hasMany uniq =
+hasMany : id -> Relationship HasMany id
+hasMany id =
     Relationship
 
 
 {-| -}
-hasOneNullable : uniq -> Relationship HasOneNullable uniq
-hasOneNullable uniq =
+hasOneNullable : id -> Relationship HasOneNullable id
+hasOneNullable id =
     Relationship
 
 
 {-| -}
-schema : uniq -> String -> schema -> Schema uniq schema
-schema uniq name s =
+schema : id -> String -> schema -> Schema id schema
+schema id name s =
     Schema name s
 
 
@@ -248,7 +248,7 @@ nullable (Field decoder urlEncoder name) =
 
 
 {-| -}
-query : Schema uniq schema -> (a -> b) -> Query uniq schema (a -> b)
+query : Schema id schema -> (a -> b) -> Query id schema (a -> b)
 query (Schema name schema) ctor =
     Query schema
         (Parameters
@@ -265,10 +265,10 @@ query (Schema name schema) ctor =
 
 {-| -}
 embed :
-    (schema1 -> Relationship HasOne uniq2)
-    -> Query uniq2 schema2 a
-    -> Query uniq1 schema1 (a -> b)
-    -> Query uniq1 schema1 b
+    (schema1 -> Relationship HasOne id2)
+    -> Query id2 schema2 a
+    -> Query id1 schema1 (a -> b)
+    -> Query id1 schema1 b
 embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
@@ -277,10 +277,10 @@ embed _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters pa
 
 {-| -}
 embedNullable :
-    (schema1 -> Relationship HasOneNullable uniq2)
-    -> Query uniq2 schema2 a
-    -> Query uniq1 schema1 (Maybe a -> b)
-    -> Query uniq1 schema1 b
+    (schema1 -> Relationship HasOneNullable id2)
+    -> Query id2 schema2 a
+    -> Query id1 schema1 (Maybe a -> b)
+    -> Query id1 schema1 b
 embedNullable _ (Query _ (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     Query schema
         (Parameters { params | embedded = (Parameters subParams) :: params.embedded })
@@ -289,14 +289,14 @@ embedNullable _ (Query _ (Parameters subParams) subDecoder) (Query schema (Param
 
 {-| -}
 embedMany :
-    (schema1 -> Relationship HasMany uniq2)
+    (schema1 -> Relationship HasMany id2)
     -> { limit : Limit
        , filters : List (schema2 -> Filter)
        , order : List (schema2 -> OrderBy)
        }
-    -> Query uniq2 schema2 a
-    -> Query uniq1 schema1 (List a -> b)
-    -> Query uniq1 schema1 b
+    -> Query id2 schema2 a
+    -> Query id1 schema1 (List a -> b)
+    -> Query id1 schema1 b
 embedMany _ options (Query subSchema (Parameters subParams) subDecoder) (Query schema (Parameters params) decoder) =
     let
         newSubParams =
@@ -312,7 +312,7 @@ embedMany _ options (Query subSchema (Parameters subParams) subDecoder) (Query s
 
 
 {-| -}
-select : (schema -> Field a) -> Query uniq schema (a -> b) -> Query uniq schema b
+select : (schema -> Field a) -> Query id schema (a -> b) -> Query id schema b
 select getField (Query schema (Parameters params) queryDecoder) =
     case getField schema of
         Field fieldDecoder _ fieldName ->
@@ -322,7 +322,7 @@ select getField (Query schema (Parameters params) queryDecoder) =
 
 
 {-| -}
-hardcoded : a -> Query uniq schema (a -> b) -> Query uniq schema b
+hardcoded : a -> Query id schema (a -> b) -> Query id schema b
 hardcoded val (Query schema params queryDecoder) =
     Query schema
         params
@@ -454,7 +454,7 @@ many :
        , filters : List (schema -> Filter)
        , order : List (schema -> OrderBy)
        }
-    -> Query uniq schema a
+    -> Query id schema a
     -> Http.Request (List a)
 many url options (Query schema (Parameters params) decoder) =
     let
@@ -494,7 +494,7 @@ first :
     -> { filters : List (schema -> Filter)
        , order : List (schema -> OrderBy)
        }
-    -> Query uniq schema a
+    -> Query id schema a
     -> Http.Request (Maybe a)
 first url options (Query schema (Parameters params) decoder) =
     let
@@ -534,7 +534,7 @@ paginate :
     -> { filters : List (schema -> Filter)
        , order : List (schema -> OrderBy)
        }
-    -> Query uniq schema a
+    -> Query id schema a
     -> Http.Request (Page a)
 paginate url { pageNumber, pageSize } options (Query schema (Parameters params) decoder) =
     let
