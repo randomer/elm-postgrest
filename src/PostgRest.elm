@@ -292,7 +292,7 @@ embedMany :
     (schema1 -> Relation HasMany uniq2)
     -> { limit : Limit
        , filters : List (schema2 -> Filter)
-       , orders : List (schema2 -> OrderBy)
+       , order : List (schema2 -> OrderBy)
        }
     -> Query uniq2 schema2 a
     -> Query uniq1 schema1 (List a -> b)
@@ -303,7 +303,7 @@ embedMany _ options (Query subSchema (Parameters subParams) subDecoder) (Query s
             { subParams
                 | limit = options.limit
                 , filter = List.map (\getFilter -> getFilter subSchema) options.filters
-                , order = List.map (\getOrder -> getOrder subSchema) options.orders
+                , order = List.map (\getOrder -> getOrder subSchema) options.order
             }
     in
         Query schema
@@ -452,7 +452,7 @@ many :
     String
     -> { limit : Limit
        , filters : List (schema -> Filter)
-       , orders : List (schema -> OrderBy)
+       , order : List (schema -> OrderBy)
        }
     -> Query uniq schema a
     -> Http.Request (List a)
@@ -462,7 +462,7 @@ many url options (Query schema (Parameters params) decoder) =
             { params
                 | limit = options.limit
                 , filter = List.map (\getFilter -> getFilter schema) options.filters
-                , order = List.map (\getOrder -> getOrder schema) options.orders
+                , order = List.map (\getOrder -> getOrder schema) options.order
             }
 
         settings =
@@ -492,7 +492,7 @@ many url options (Query schema (Parameters params) decoder) =
 first :
     String
     -> { filters : List (schema -> Filter)
-       , orders : List (schema -> OrderBy)
+       , order : List (schema -> OrderBy)
        }
     -> Query uniq schema a
     -> Http.Request (Maybe a)
@@ -501,7 +501,7 @@ first url options (Query schema (Parameters params) decoder) =
         newParams =
             { params
                 | filter = List.map (\getFilter -> getFilter schema) options.filters
-                , order = List.map (\getOrder -> getOrder schema) options.orders
+                , order = List.map (\getOrder -> getOrder schema) options.order
             }
 
         settings =
@@ -532,7 +532,7 @@ paginate :
     String
     -> { pageNumber : Int, pageSize : Int }
     -> { filters : List (schema -> Filter)
-       , orders : List (schema -> OrderBy)
+       , order : List (schema -> OrderBy)
        }
     -> Query uniq schema a
     -> Http.Request (Page a)
@@ -541,7 +541,7 @@ paginate url { pageNumber, pageSize } options (Query schema (Parameters params) 
         newParams =
             { params
                 | filter = List.map (\getFilter -> getFilter schema) options.filters
-                , order = List.map (\getOrder -> getOrder schema) options.orders
+                , order = List.map (\getOrder -> getOrder schema) options.order
                 , limit = (LimitTo pageSize)
             }
 
