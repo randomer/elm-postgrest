@@ -42,7 +42,7 @@ module PostgRest
         , limitTo
         , noLimit
         , many
-        , first
+        , single
         , paginate
         )
 
@@ -75,7 +75,7 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 @docs Limit, limitTo, noLimit
 
 # Send a Query
-@docs many, first
+@docs many, single
 
 ### Pagination
 @docs Page, paginate
@@ -488,21 +488,17 @@ many url options (Query schema (Parameters params) decoder) =
             }
 
 
-{-| -}
-first :
+{-| Get single row. Http Error if many or no rows are returned.
+-}
+single :
     String
-    -> { filters : List (schema -> Filter)
-       , order : List (schema -> OrderBy)
-       }
+    -> List (schema -> Filter)
     -> Query id schema a
-    -> Http.Request (Maybe a)
-first url options (Query schema (Parameters params) decoder) =
+    -> Http.Request a
+single url filters (Query schema (Parameters params) decoder) =
     let
         newParams =
-            { params
-                | filter = List.map (\getFilter -> getFilter schema) options.filters
-                , order = List.map (\getOrder -> getOrder schema) options.order
-            }
+            { params | filter = List.map (\getFilter -> getFilter schema) filters }
 
         settings =
             { count = False
@@ -521,7 +517,7 @@ first url options (Query schema (Parameters params) decoder) =
             , headers = headers
             , url = queryUrl
             , body = Http.emptyBody
-            , expect = Http.expectJson (Decode.nullable decoder)
+            , expect = Http.expectJson decoder
             , timeout = Nothing
             , withCredentials = False
             }
@@ -530,26 +526,26 @@ first url options (Query schema (Parameters params) decoder) =
 {-| -}
 paginate :
     String
-    -> { pageNumber : Int, pageSize : Int }
+    -> { page : Int, size : Int }
     -> { filters : List (schema -> Filter)
        , order : List (schema -> OrderBy)
        }
     -> Query id schema a
     -> Http.Request (Page a)
-paginate url { pageNumber, pageSize } options (Query schema (Parameters params) decoder) =
+paginate url { page, size } options (Query schema (Parameters params) decoder) =
     let
         newParams =
             { params
                 | filter = List.map (\getFilter -> getFilter schema) options.filters
                 , order = List.map (\getOrder -> getOrder schema) options.order
-                , limit = (LimitTo pageSize)
+                , limit = (LimitTo size)
             }
 
         settings =
-            -- NOTE: pageNumber is NOT 0 indexed. the first page is 1.
+            -- NOTE: page is NOT 0 indexed. the first page is 1.
             { count = True
             , singular = False
-            , offset = Just ((pageNumber - 1) * pageSize)
+            , offset = Just ((page - 1) * size)
             }
 
         ( headers, queryUrl ) =
