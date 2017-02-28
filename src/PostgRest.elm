@@ -526,26 +526,26 @@ one url filters (Query schema (Parameters params) decoder) =
 {-| -}
 paginate :
     String
-    -> { pageNumber : Int, pageSize : Int }
+    -> { page : Int, size : Int }
     -> { filters : List (schema -> Filter)
        , order : List (schema -> OrderBy)
        }
     -> Query id schema a
     -> Http.Request (Page a)
-paginate url { pageNumber, pageSize } options (Query schema (Parameters params) decoder) =
+paginate url { page, size } options (Query schema (Parameters params) decoder) =
     let
         newParams =
             { params
                 | filter = List.map (\getFilter -> getFilter schema) options.filters
                 , order = List.map (\getOrder -> getOrder schema) options.order
-                , limit = (LimitTo pageSize)
+                , limit = (LimitTo size)
             }
 
         settings =
-            -- NOTE: pageNumber is NOT 0 indexed. the first page is 1.
+            -- NOTE: page is NOT 0 indexed. the first page is 1.
             { count = True
             , singular = False
-            , offset = Just ((pageNumber - 1) * pageSize)
+            , offset = Just ((page - 1) * size)
             }
 
         ( headers, queryUrl ) =
