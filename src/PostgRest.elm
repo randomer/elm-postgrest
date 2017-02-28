@@ -42,7 +42,7 @@ module PostgRest
         , limitTo
         , noLimit
         , many
-        , one
+        , single
         , paginate
         )
 
@@ -75,7 +75,7 @@ I recommend looking at the [examples](https://github.com/john-kelly/elm-postgres
 @docs Limit, limitTo, noLimit
 
 # Send a Query
-@docs many, one
+@docs many, single
 
 ### Pagination
 @docs Page, paginate
@@ -490,12 +490,12 @@ many url options (Query schema (Parameters params) decoder) =
 
 {-| Get single row. Http Error if many or no rows are returned.
 -}
-one :
+single :
     String
     -> List (schema -> Filter)
     -> Query id schema a
     -> Http.Request a
-one url filters (Query schema (Parameters params) decoder) =
+single url filters (Query schema (Parameters params) decoder) =
     let
         newParams =
             { params | filter = List.map (\getFilter -> getFilter schema) filters }
