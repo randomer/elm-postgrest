@@ -18,16 +18,17 @@ sessionCmd =
         |> PG.select .id
         |> PG.select .location
         |> PG.select .start_time
-        |> PG.first "http://postgrest.herokuapp.com/"
+        |> PG.many "http://postgrest.herokuapp.com/"
             { filters = [ .location |> PG.not PG.ilike "%russia%" ]
             , order = [ PG.asc .start_time ]
+            , limit = PG.noLimit
             }
         |> Http.send Fetch
 
 
 main =
     Html.program
-        { init = ( { sessions = Nothing }, sessionCmd )
+        { init = ( { sessions = [] }, sessionCmd )
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
@@ -39,7 +40,7 @@ main =
 
 
 type alias Model =
-    { sessions : Maybe Session
+    { sessions : List Session
     }
 
 
@@ -48,7 +49,7 @@ type alias Model =
 
 
 type Msg
-    = Fetch (Result Http.Error (Maybe Session))
+    = Fetch (Result Http.Error (List Session))
 
 
 update msg model =
